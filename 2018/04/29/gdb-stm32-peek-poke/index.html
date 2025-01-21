@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+
+  
+  <title>gdb stm32 peek &amp; poke | zsteva elektro blog</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="description" content="Pošto smo uspešno povezali razvojnu pločicu, da probamo da upalimo LED diodu na pločici.   Kod je preuzet iz https:&#x2F;&#x2F;github.com&#x2F;satoshinm&#x2F;pill_blink bare-metal&#x2F;pill_blink.c Pošto nam st-util prep">
+<meta property="og:type" content="article">
+<meta property="og:title" content="gdb stm32 peek &amp; poke">
+<meta property="og:url" content="https://zsteva-elektro-blog.github.io/2018/04/29/gdb-stm32-peek-poke/index.html">
+<meta property="og:site_name" content="zsteva elektro blog">
+<meta property="og:description" content="Pošto smo uspešno povezali razvojnu pločicu, da probamo da upalimo LED diodu na pločici.   Kod je preuzet iz https:&#x2F;&#x2F;github.com&#x2F;satoshinm&#x2F;pill_blink bare-metal&#x2F;pill_blink.c Pošto nam st-util prep">
+<meta property="og:locale">
+<meta property="og:image" content="https://zsteva-elektro-blog.github.io/2018/04/29/gdb-stm32-peek-poke/stm32_led.jpg">
+<meta property="article:published_time" content="2018-04-29T09:20:56.000Z">
+<meta property="article:modified_time" content="2025-01-21T11:47:00.849Z">
+<meta property="article:author" content="Zeljko Stevanovic">
+<meta property="article:tag" content="stm32">
+<meta property="article:tag" content="gdb">
+<meta property="article:tag" content="blue_pill">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://zsteva-elektro-blog.github.io/2018/04/29/gdb-stm32-peek-poke/stm32_led.jpg">
+  
+    <link rel="alternate" href="/atom.xml" title="zsteva elektro blog" type="application/atom+xml">
+  
+  
+    <link rel="icon" href="/favicon.png">
+  
+  
+    <link href="//fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css">
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+<meta name="generator" content="Hexo 7.3.0"></head>
+
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/" id="logo">zsteva elektro blog</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"></a>
+        
+          <a class="main-nav-link" href="/">Home</a>
+        
+          <a class="main-nav-link" href="/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+          <a id="nav-rss-link" class="nav-icon" href="/atom.xml" title="RSS Feed"></a>
+        
+        <a id="nav-search-btn" class="nav-icon" title="Search"></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="https://zsteva-elektro-blog.github.io"></form>
+      </div>
+    </div>
+  </div>
+</header>
+      <div class="outer">
+        <section id="main"><article id="post-gdb-stm32-peek-poke" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2018/04/29/gdb-stm32-peek-poke/" class="article-date">
+  <time datetime="2018-04-29T09:20:56.000Z" itemprop="datePublished">2018-04-29</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      gdb stm32 peek &amp; poke
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>Pošto smo uspešno <a href="/2018/04/29/stlink-konektovanje/" title="stlink konektovanje">povezali razvojnu pločicu</a>, da probamo da upalimo LED diodu na pločici.</p>
+<img src="/2018/04/29/gdb-stm32-peek-poke/stm32_led.jpg" class="">
+
+<p>Kod je preuzet iz <a href="https://github.com/satoshinm/pill_blink">https://github.com/satoshinm/pill_blink</a> bare-metal&#x2F;pill_blink.c</p>
+<p>Pošto nam st-util prepoznaje pločicu, povezaćemo se gdb-om.</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">$ arm-none-eabi-gdb -ex &#x27;target extended-remote localhost:4242&#x27;</span><br><span class="line">GNU gdb (GDB) 8.1</span><br><span class="line">Copyright (C) 2018 Free Software Foundation, Inc.</span><br><span class="line">License GPLv3+: GNU GPL version 3 or later &lt;http://gnu.org/licenses/gpl.html&gt;</span><br><span class="line">This is free software: you are free to change and redistribute it.</span><br><span class="line">There is NO WARRANTY, to the extent permitted by law.  Type &quot;show copying&quot;</span><br><span class="line">and &quot;show warranty&quot; for details.</span><br><span class="line">This GDB was configured as &quot;--host=x86_64-pc-linux-gnu --target=arm-none-eabi&quot;.</span><br><span class="line">Type &quot;show configuration&quot; for configuration details.</span><br><span class="line">For bug reporting instructions, please see:</span><br><span class="line">&lt;http://www.gnu.org/software/gdb/bugs/&gt;.</span><br><span class="line">Find the GDB manual and other documentation resources online at:</span><br><span class="line">&lt;http://www.gnu.org/software/gdb/documentation/&gt;.</span><br><span class="line">For help, type &quot;help&quot;.</span><br><span class="line">Type &quot;apropos word&quot; to search for commands related to &quot;word&quot;.</span><br><span class="line">Remote debugging using localhost:4242</span><br><span class="line">warning: No executable has been specified and target does not support</span><br><span class="line">determining executable automatically.  Try using the &quot;file&quot; command.</span><br><span class="line">0xfffffffe in ?? ()</span><br><span class="line">(gdb) </span><br></pre></td></tr></table></figure>
+
+<p>Zatim uraditi potrebnu inicijalizaciju, u ovom trenutku nemam pojma šta ovo tačno radi, prepisano je iz pill_blink primera.</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">set *(unsigned int *)0x40021018 |= (1 &lt;&lt; 4)</span><br><span class="line">set *(unsigned int *)0x40011004 |= (0x00 &lt;&lt; (((13 - 8) * 4) + 2))</span><br><span class="line">set *(unsigned int *)0x40011004 |= (0x02 &lt;&lt; ((13 - 8) * 4))</span><br></pre></td></tr></table></figure>
+
+<p>Po ovome LED na pločici ce početi da svetli. Da bi ga ugasili treba da izvšimo:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">set *(unsigned int *)0x40011010 = (1 &lt;&lt; 13)</span><br></pre></td></tr></table></figure>
+
+<p>I potom da upalimo:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">set *(unsigned int *)0x40011014 = (1 &lt;&lt; 13)</span><br></pre></td></tr></table></figure>
+
+<p>Kao u stara dobra vremena 8bitnih računara, osim što sve deluje malo komplikovanije.</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://zsteva-elektro-blog.github.io/2018/04/29/gdb-stm32-peek-poke/" data-id="cm66f0cd40000z972gu944qam" class="article-share-link">Share</a>
+      
+      
+  <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/blue-pill/" rel="tag">blue_pill</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/gdb/" rel="tag">gdb</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/stm32/" rel="tag">stm32</a></li></ul>
+
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+    <a href="/2018/04/30/stm32-hello-world-tj-blinki-led/" id="article-nav-newer" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Newer</strong>
+      <div class="article-nav-title">
+        
+          stm32 hello world tj blinki led
+        
+      </div>
+    </a>
+  
+  
+    <a href="/2018/04/29/stlink-konektovanje/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">stlink konektovanje</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Tags</h3>
+    <div class="widget">
+      <ul class="tag-list" itemprop="keywords"><li class="tag-list-item"><a class="tag-list-link" href="/tags/blink-led/" rel="tag">blink_led</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/blue-pill/" rel="tag">blue_pill</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/gdb/" rel="tag">gdb</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hello-world/" rel="tag">hello_world</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/stlink/" rel="tag">stlink</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/stm32/" rel="tag">stm32</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Tag Cloud</h3>
+    <div class="widget tagcloud">
+      <a href="/tags/blink-led/" style="font-size: 10px;">blink_led</a> <a href="/tags/blue-pill/" style="font-size: 20px;">blue_pill</a> <a href="/tags/gdb/" style="font-size: 15px;">gdb</a> <a href="/tags/hello-world/" style="font-size: 10px;">hello_world</a> <a href="/tags/stlink/" style="font-size: 10px;">stlink</a> <a href="/tags/stm32/" style="font-size: 20px;">stm32</a>
+    </div>
+  </div>
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Archives</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/04/">April 2018</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Recent Posts</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/2018/04/30/stm32-hello-world-tj-blinki-led/">stm32 hello world tj blinki led</a>
+          </li>
+        
+          <li>
+            <a href="/2018/04/29/gdb-stm32-peek-poke/">gdb stm32 peek &amp; poke</a>
+          </li>
+        
+          <li>
+            <a href="/2018/04/29/stlink-konektovanje/">stlink konektovanje</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      &copy; 2025 Zeljko Stevanovic<br>
+      Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+
+
+  
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css">
+
+  
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+
+
+
+
+<script src="/js/script.js"></script>
+
+
+
+
+  </div>
+</body>
+</html>
